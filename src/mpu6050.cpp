@@ -1,5 +1,5 @@
 #include "mpu6050.h"
-
+#include "kiss_fft.h"
 MPU6050::MPU6050(PinName sda, PinName scl) : i2c(sda, scl) {}
 
 void MPU6050::writeRegister(uint8_t reg, uint8_t data)
@@ -58,43 +58,58 @@ void MPU6050::readRawData(int16_t &ax, int16_t &ay, int16_t &az, int16_t &gx, in
     gz = (data[12] << 8) | data[13];
 }
 
-void MPU6050::collectAccelerationData()
+void MPU6050::collectAccelerationData(int rate)
 {
+    chrono::milliseconds sleep_time(1000 / rate);
+
     for (int i = 0; i < SAMPLE_SIZE; i++)
     {
         readRawData(Ax, Ay, Az, Gx, Gy, Gz);
         accele_x[i] = Ax;
-        ThisThread::sleep_for(10ms);
+        ThisThread::sleep_for(sleep_time);
     }
 }
 
 void MPU6050::FFT()
 {
-    for (int i = 0; i < FFT_SIZE; i++)
+    kiss_fft_cfg cfg = kiss_fft_alloc(SAMPLE_SIZE, 0, NULL, NULL);
+
+    for (int i = 0; i < SAMPLE_SIZE; i++)
     {
-        input_f32[i] = 0.0f;
+        fft_input[i].r = (float)accele_x[i];
+        fft_input[i].i = 0.0f;
+    }
+    kiss_fft(cfg, fft_input, fft_output);
+
+    for (int i = 0; i < SAMPLE_SIZE / 2; i++)
+    {
+        fft_magnitude[i] = sqrt(fft_output[i].r * fft_output[i].r + fft_output[i].i * fft_output[i].i);
+    }
+    kiss_fft_free(cfg);
+    cfg = NULL;
+}
+
+float *MPU6050::getFFTMagnitude()
+{
+    return fft_magnitude;
+}
+
+int MPU6050::getDominantFrequency(float samplingRate)
+{
+    int maxIndex = 0;
+    float maxValue = 0;
+
+    // Find the frequency bin with maximum magnitude (skipping DC component at index 0)
+    for (int i = 1; i < SAMPLE_SIZE / 2; i++)
+    {
+        if (fft_magnitude[i] > maxValue)
+        {
+            maxValue = fft_magnitude[i];
+            maxIndex = i;
+        }
     }
 
-    for (int i = 0; i < FFT_SIZE; i++)
-    {
-        printf("Accele_x[%d]: %d\n", i, accele_x[i]);
-
-        input_f32[i] = (float32_t)accele_x[i];
-
-        printf("input_f32[%d]: %f\n", i, input_f32[i]);
-    }
-
-    arm_status status = arm_rfft_fast_init_f32(&fft_instance, FFT_SIZE);
-    if (status != ARM_MATH_SUCCESS)
-    {
-        printf("FFT initialization failed!\n");
-    }
-
-    arm_rfft_fast_f32(&fft_instance, input_f32, output_f32, 0);
-
-    printf("FFT Analysis:\n");
-    for (int i = 0; i < FFT_SIZE / 2; i++)
-    {
-        printf("Freq Bin %d: %f\n", i, output_f32[i]);
-    }
+    // Convert bin index to frequency in Hz
+    float dominantFreq = maxIndex * samplingRate / SAMPLE_SIZE;
+    return round(dominantFreq);
 }
