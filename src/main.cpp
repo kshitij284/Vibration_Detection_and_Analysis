@@ -21,26 +21,8 @@ int main()
 
     while (1)
     {
-        // Collect accelerometer data
-        mpu.collectAccelerationData(SAMPLING_RATE);
 
-        // Perform FFT on the collected data
-        mpu.FFT();
-
-        // // Get dominant frequency
-        int domFreq = mpu.getDominantFrequency((float)SAMPLING_RATE);
-        printf("Dominant frequency: %d Hz\n", domFreq);
-
-
-        // Optional: Print the first few FFT magnitude values
-        float *magnitudes = mpu.getFFTMagnitude();
-        printf("FFT Magnitudes: ");
-        for (int i = 0; i < 10; i++)
-        {
-            printf("%.2f ", magnitudes[i]);
-        }
-        printf("\n");
-
-        ThisThread::sleep_for(1s);
+        mpu.repeatedFrequency(SAMPLING_RATE, 5);
+        ThisThread::sleep_for(5000ms);
     }
 }

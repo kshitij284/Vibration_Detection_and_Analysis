@@ -1,5 +1,6 @@
 #include "mpu6050.h"
 #include "kiss_fft.h"
+#include <vector>
 MPU6050::MPU6050(PinName sda, PinName scl) : i2c(sda, scl) {}
 
 void MPU6050::writeRegister(uint8_t reg, uint8_t data)
@@ -112,4 +113,39 @@ int MPU6050::getDominantFrequency(float samplingRate)
     // Convert bin index to frequency in Hz
     float dominantFreq = maxIndex * samplingRate / SAMPLE_SIZE;
     return round(dominantFreq);
+}
+
+int MPU6050::repeatedFrequency(float samplingRate, int count)
+{
+    bool flag = false;
+    std::vector<int> buffer(count, 0); // Use vector instead of VLA
+
+    do
+    {
+        for (int i = 0; i < count; i++)
+        {
+            collectAccelerationData((int)samplingRate);
+            FFT();
+            buffer[i] = getDominantFrequency((float)samplingRate);
+        }
+
+        // Check if all elements are equal
+        bool allEqual = std::all_of(buffer.begin() + 1, buffer.end(),
+                                    [&](int val)
+                                    { return val == buffer[0]; });
+
+        if (allEqual)
+        {
+            flag = true;
+            printf("Repeated frequency: %d Hz\n", buffer[0]);
+            return buffer[0];
+        }
+        else
+        {
+            printf("Frequency not repeated\n");
+            ThisThread::sleep_for(100ms);
+        }
+    } while (!flag);
+
+    return -1; // fallback to silence compiler warning (shouldn't reach here)
 }
