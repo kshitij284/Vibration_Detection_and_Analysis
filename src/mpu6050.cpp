@@ -71,6 +71,15 @@ void MPU6050::collectAccelerationData(int rate)
     }
 }
 
+void MPU6050::printAccelerationData()
+{
+    for (int i = 0; i < SAMPLE_SIZE; i++)
+    {
+        printf(" %d ,", accele_x[i]);
+    }
+    printf("\n");
+}
+
 void MPU6050::FFT()
 {
     kiss_fft_cfg cfg = kiss_fft_alloc(SAMPLE_SIZE, 0, NULL, NULL);

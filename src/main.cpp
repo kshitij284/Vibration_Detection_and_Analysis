@@ -21,8 +21,8 @@ int main()
 
     while (1)
     {
-
-        mpu.repeatedFrequency(SAMPLING_RATE, 5);
-        ThisThread::sleep_for(5000ms);
+        mpu.collectAccelerationData(SAMPLING_RATE);
+        mpu.printAccelerationData();
+        ThisThread::sleep_for(1000ms); // Sleep for 1 second
     }
 }
