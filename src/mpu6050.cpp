@@ -72,7 +72,8 @@ void MPU6050::collectAccelerationData(int rate)
 }
 
 void MPU6050::printAccelerationData()
-{
+{   printf("Acceleration Data:\n");
+    printf("Ax: "); 
     for (int i = 0; i < SAMPLE_SIZE; i++)
     {
         printf(" %d ,", accele_x[i]);
