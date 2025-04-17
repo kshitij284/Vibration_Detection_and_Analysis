@@ -1,7 +1,7 @@
 import serial
 from datetime import datetime
 
-port = '/dev/tty.usbmodem113103'  
+port = '/dev/tty.usbmodem113203'  
 baud = 9600
 filename = f"imu_data_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
 
