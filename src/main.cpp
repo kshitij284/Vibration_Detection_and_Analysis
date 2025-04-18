@@ -56,9 +56,15 @@ void mpu_task()
     {
         mpu.collectAccelerationData(SAMPLING_RATE);
         mpu.printAccelerationData();
-        mpu.FFT();
-        int dominantFreq = mpu.getDominantFrequency(SAMPLING_RATE);
-        printf("Dominant Frequency with kissfft: %d Hz\n", dominantFreq);
+        int dominantFreq = mpu.getDominantFrequency(SAMPLING_RATE, 'x');
+        printf("Dominant Frequency with kissfft for x axis: %d Hz\n", dominantFreq);
+
+        int dominantFreq = mpu.getDominantFrequency(SAMPLING_RATE, 'y');
+        printf("Dominant Frequency with kissfft for y axis: %d Hz\n", dominantFreq);
+
+        int dominantFreq = mpu.getDominantFrequency(SAMPLING_RATE, 'z');
+        printf("Dominant Frequency with kissfft for z axis: %d Hz\n", dominantFreq);
+        
         ThisThread::sleep_for(1000ms); // Sleep for 1 second
     }
 }
@@ -71,7 +77,7 @@ int main()
         printf("MPU6050 connection failed!\n");
         return -1;
     }
-    printf("Test:  with low and high working vibrations\n");
+    printf("Test:  with no external vibrations\n");
 
     while (1)
     {

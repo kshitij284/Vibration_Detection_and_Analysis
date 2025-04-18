@@ -67,35 +67,74 @@ void MPU6050::collectAccelerationData(int rate)
     {
         readRawData(Ax, Ay, Az, Gx, Gy, Gz);
         accele_x[i] = Ax;
+        accele_y[i] = Ay;
+        accele_z[i] = Az;
         ThisThread::sleep_for(sleep_time);
     }
 }
 
 void MPU6050::printAccelerationData()
-{   printf("Acceleration Data:\n");
-    printf("Ax: "); 
+{
+    printf("Acceleration Data:\n");
+    printf("Ax: ");
     for (int i = 0; i < SAMPLE_SIZE; i++)
     {
         printf(" %d ,", accele_x[i]);
     }
     printf("\n");
-}
-
-void MPU6050::FFT()
-{
-    kiss_fft_cfg cfg = kiss_fft_alloc(SAMPLE_SIZE, 0, NULL, NULL);
-
+    printf("Ay: ");
     for (int i = 0; i < SAMPLE_SIZE; i++)
     {
-        fft_input[i].r = (float)accele_x[i];
+        printf(" %d ,", accele_y[i]);
+    }
+    printf("\n");
+    printf("Az: ");
+    for (int i = 0; i < SAMPLE_SIZE; i++)
+    {
+        printf(" %d ,", accele_z[i]);
+    }
+    printf("\n");
+}
+
+void MPU6050::FFT_wAxis(char axis)
+{
+    kiss_fft_cfg cfg = kiss_fft_alloc(SAMPLE_SIZE, 0, NULL, NULL);
+    int16_t *selectedArray = nullptr;
+
+    // Select the appropriate array based on the axis input
+    switch (axis)
+    {
+    case 'x':
+        selectedArray = accele_x;
+        break;
+    case 'y':
+        selectedArray = accele_y;
+        break;
+    case 'z':
+        selectedArray = accele_z;
+        break;
+    default:
+        printf("Invalid axis. Please use 'x', 'y', or 'z'.\n");
+        kiss_fft_free(cfg);
+        return;
+    }
+
+    // Prepare FFT input
+    for (int i = 0; i < SAMPLE_SIZE; i++)
+    {
+        fft_input[i].r = (float)selectedArray[i];
         fft_input[i].i = 0.0f;
     }
+
+    // Perform FFT
     kiss_fft(cfg, fft_input, fft_output);
 
+    // Calculate magnitude
     for (int i = 0; i < SAMPLE_SIZE / 2; i++)
     {
         fft_magnitude[i] = sqrt(fft_output[i].r * fft_output[i].r + fft_output[i].i * fft_output[i].i);
     }
+
     kiss_fft_free(cfg);
     cfg = NULL;
 }
@@ -105,8 +144,14 @@ float *MPU6050::getFFTMagnitude()
     return fft_magnitude;
 }
 
-int MPU6050::getDominantFrequency(float samplingRate)
+
+int MPU6050::getDominantFrequency(float samplingRate, char axis)
 {
+
+    // Perform FFT on the selected axis
+    FFT_wAxis(axis);
+
+    // Initialize variables to find the maximum frequency
     int maxIndex = 0;
     float maxValue = 0;
 
@@ -123,39 +168,4 @@ int MPU6050::getDominantFrequency(float samplingRate)
     // Convert bin index to frequency in Hz
     float dominantFreq = maxIndex * samplingRate / SAMPLE_SIZE;
     return round(dominantFreq);
-}
-
-int MPU6050::repeatedFrequency(float samplingRate, int count)
-{
-    bool flag = false;
-    std::vector<int> buffer(count, 0); // Use vector instead of VLA
-
-    do
-    {
-        for (int i = 0; i < count; i++)
-        {
-            collectAccelerationData((int)samplingRate);
-            FFT();
-            buffer[i] = getDominantFrequency((float)samplingRate);
-        }
-
-        // Check if all elements are equal
-        bool allEqual = std::all_of(buffer.begin() + 1, buffer.end(),
-                                    [&](int val)
-                                    { return val == buffer[0]; });
-
-        if (allEqual)
-        {
-            flag = true;
-            printf("Repeated frequency: %d Hz\n", buffer[0]);
-            return buffer[0];
-        }
-        else
-        {
-            printf("Frequency not repeated\n");
-            ThisThread::sleep_for(100ms);
-        }
-    } while (!flag);
-
-    return -1; // fallback to silence compiler warning (shouldn't reach here)
 }
