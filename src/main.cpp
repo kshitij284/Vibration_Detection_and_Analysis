@@ -52,18 +52,19 @@ void servo_task()
 
 void mpu_task()
 {
+    // mpu.calibrateAccelerometer();
     while (true)
     {
-        mpu.collectAccelerationData(SAMPLING_RATE);
+        // mpu.collectAccelerationData(SAMPLING_RATE);
         mpu.printAccelerationData();
-        int dominantFreq = mpu.getDominantFrequency(SAMPLING_RATE, 'x');
-        printf("Dominant Frequency with kissfft for x axis: %d Hz\n", dominantFreq);
+        int dominantFreqX = mpu.getDominantFrequency(SAMPLING_RATE, 'x');
+        printf("Dominant Frequency with kissfft for x axis: %d Hz\n", dominantFreqX);
 
-        int dominantFreq = mpu.getDominantFrequency(SAMPLING_RATE, 'y');
-        printf("Dominant Frequency with kissfft for y axis: %d Hz\n", dominantFreq);
+        int dominantFreqY = mpu.getDominantFrequency(SAMPLING_RATE, 'y');
+        printf("Dominant Frequency with kissfft for y axis: %d Hz\n", dominantFreqY);
 
-        int dominantFreq = mpu.getDominantFrequency(SAMPLING_RATE, 'z');
-        printf("Dominant Frequency with kissfft for z axis: %d Hz\n", dominantFreq);
+        int dominantFreqZ = mpu.getDominantFrequency(SAMPLING_RATE, 'z');
+        printf("Dominant Frequency with kissfft for z axis: %d Hz\n", dominantFreqZ);
         
         ThisThread::sleep_for(1000ms); // Sleep for 1 second
     }
@@ -82,7 +83,7 @@ int main()
     while (1)
     {
         mpu_thread.start(mpu_task);
-        servo_thread.start(servo_task);
+        // servo_thread.start(servo_task);
         ThisThread::sleep_for(1000ms);
     }
 }

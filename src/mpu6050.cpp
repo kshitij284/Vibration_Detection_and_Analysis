@@ -96,6 +96,86 @@ void MPU6050::printAccelerationData()
     printf("\n");
 }
 
+void MPU6050::printAccelerationDatainG()
+{
+    printf("Acceleration Data (in g):\n");
+
+    printf("Ax: ");
+    for (int i = 0; i < SAMPLE_SIZE; i++)
+    {
+        float ax_g = (accele_x[i] - accele_bias[0]) / accele_scale[0];
+        printf(" %d ,", (int)ax_g);
+    }
+    printf("\n");
+
+    printf("Ay: ");
+    for (int i = 0; i < SAMPLE_SIZE; i++)
+    {
+        float ay_g = (accele_y[i] - accele_bias[1]) / accele_scale[1];
+        printf(" %d ,", (int)ay_g);
+    }
+    printf("\n");
+
+    printf("Az: ");
+    for (int i = 0; i < SAMPLE_SIZE; i++)
+    {
+        float az_g = (accele_z[i] - accele_bias[2]) / accele_scale[2];
+        printf(" %d ,", (int)az_g);
+    }
+    printf("\n");
+}
+
+void MPU6050::calibrateAccelerometer()
+{
+    int16_t Ax, Ay, Az, Gx, Gy, Gz;
+    int16_t sample_data[10][3];           // Ax, Ay, Az
+    int16_t orientation_data[6][3] = {0}; // Stores average for 6 orientations
+
+    const char *orientation_labels[6] = {
+        "+X axis up", "-X axis up",
+        "+Y axis up", "-Y axis up",
+        "+Z axis up", "-Z axis up"};
+
+    printf("Calibrating Accelerometer...\n");
+    printf("Place the sensor in each orientation when prompted.\n");
+
+    for (int ori = 0; ori < 6; ori++)
+    {
+        printf("\nPlace sensor in orientation: %s\n", orientation_labels[ori]);
+        ThisThread::sleep_for(5s); // Time to place it
+
+        int32_t sum_ax = 0, sum_ay = 0, sum_az = 0;
+
+        for (int i = 0; i < 10; i++)
+        {
+            readRawData(Ax, Ay, Az, Gx, Gy, Gz);
+            sum_ax += Ax;
+            sum_ay += Ay;
+            sum_az += Az;
+            ThisThread::sleep_for(100ms);
+        }
+
+        orientation_data[ori][0] = sum_ax / 10;
+        orientation_data[ori][1] = sum_ay / 10;
+        orientation_data[ori][2] = sum_az / 10;
+    }
+
+    // Bias and scale computation
+
+    accele_bias[0] = (orientation_data[0][0] + orientation_data[1][0]) / 2.0f; // X
+    accele_scale[0] = (orientation_data[0][0] - orientation_data[1][0]) / 2.0f;
+
+    accele_bias[1] = (orientation_data[2][1] + orientation_data[3][1]) / 2.0f; // Y
+    accele_scale[1] = (orientation_data[2][1] - orientation_data[3][1]) / 2.0f;
+
+    accele_bias[2] = (orientation_data[4][2] + orientation_data[5][2]) / 2.0f; // Z
+    accele_scale[2] = (orientation_data[4][2] - orientation_data[5][2]) / 2.0f;
+
+    printf("\nCalibration Complete.\n");
+    printf("Bias:  X=%d  Y=%d  Z=%d\n", (int)accele_bias[0], (int)accele_bias[1], (int)accele_bias[2]);
+    printf("Scale: X=%d  Y=%d  Z=%d\n", (int)accele_scale[0], (int)accele_scale[1], (int)accele_scale[2]);
+}
+
 void MPU6050::FFT_wAxis(char axis)
 {
     kiss_fft_cfg cfg = kiss_fft_alloc(SAMPLE_SIZE, 0, NULL, NULL);
@@ -144,7 +224,6 @@ float *MPU6050::getFFTMagnitude()
     return fft_magnitude;
 }
 
-
 int MPU6050::getDominantFrequency(float samplingRate, char axis)
 {
 
@@ -169,3 +248,4 @@ int MPU6050::getDominantFrequency(float samplingRate, char axis)
     float dominantFreq = maxIndex * samplingRate / SAMPLE_SIZE;
     return round(dominantFreq);
 }
+ 
